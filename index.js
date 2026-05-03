@@ -6,6 +6,9 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 dbConfig()
+app.get('/',(req, res)=>{
+    res.send("Done")
+})
 app.post('/registration', (req, res)=>{
     console.log("Done");
 })
