@@ -8,7 +8,7 @@ const transporter = nodemailer.createTransport({
         pass: "whvniwjdlggvpotl",
     },
 });
-const emailverification = async(token)=>{
+const emailverification = async(token, email)=>{
     try {
             const info = await transporter.sendMail({
                 from: 'nusrat49141@gmail.com', // sender address

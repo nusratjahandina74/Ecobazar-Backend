@@ -1,10 +1,11 @@
-const jwt = require('jsonwebtoken')
 const User = require('../models/userModel')
 const emailverification = require('../utils/email');
+const { emptyFieldValidation } = require('../utils/validation');
+const tokenGenerator = require('../utils/tokenGenerator');
 const registrationController = async (req, res) => {
     try {
         const { email, password, confirmPassword, terms } = req.body
-
+        
         if (!email || !password || !confirmPassword) {
             return res.status(400).send({
                 success: false,
@@ -18,6 +19,7 @@ const registrationController = async (req, res) => {
                 message: "Please accept our Terms and Conditions."
             })
         }
+        emptyFieldValidation(res,email,password,confirmPassword,terms)
 
         if (password !== confirmPassword) {
             return res.status(400).send({
@@ -40,14 +42,13 @@ const registrationController = async (req, res) => {
             terms: terms
         })
        await user.save()
-       
-        const token = jwt.sign({
-            id: user._id,
-            email: user.email
-        }, process.env.ACCESS_TOKEN_SECRET, {
-            expiresIn: '1d'
-        })
-        emailverification(token)
+
+    const token = tokenGenerator({
+         id: user._id,
+         email: user.email
+    },process.env.ACCESS_TOKEN_SECRET,'1d')
+
+        emailverification(token, email)
         return res.status(201).send({
             success: true,
             message: "Registration Successfully Done"
