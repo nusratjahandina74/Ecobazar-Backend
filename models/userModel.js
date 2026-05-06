@@ -4,7 +4,7 @@ const userSchema = new Schema({
     firstName: {
         type: String
     },
-    LastName: {
+    lastName: {
         type: String
     },
     email: {

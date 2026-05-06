@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express')
 const cors = require('cors')
 const dbConfig = require('./config/dbConfig');
-const { registrationController } = require('./controllers/authController');
+const { registrationController, loginController, forgetPasswordController, resetPasswordController, resendverificationemailcontroller } = require('./controllers/authController');
 
 
 //Middleware
@@ -17,6 +17,10 @@ dbConfig()
 // })
 
 app.post('/registration', registrationController)
+app.post('/login', loginController)
+app.post('/forgetpassword', forgetPasswordController)
+app.post('/resetpassword/:token', resetPasswordController)
+app.post('/resendverificationemail', resendverificationemailcontroller)
 
 
 

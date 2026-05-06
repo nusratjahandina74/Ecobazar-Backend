@@ -25,4 +25,22 @@ const emailverification = async(token, email)=>{
         } 
 
 }
-module.exports = emailverification
+const resetPasswordmail = async(token, email)=>{
+    try {
+            const info = await transporter.sendMail({
+                from: 'nusrat49141@gmail.com', // sender address
+                to: email, // list of recipients
+                subject: "Please Reset your Password", // subject line
+                html: `<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:Arial,sans-serif"><table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#f5f5f5"><tr><td align="center" style="padding:40px 20px"><table width="600" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="border-radius:8px;overflow:hidden"><tr><td align="center" bgcolor="#2e7d32" style="padding:30px 20px"><h1 style="color:#fff;margin:0;font-size:28px">EcoBazar</h1></td></tr><tr><td style="padding:40px 30px;color:#333"><h2 style="margin-top:0">Reset Your Password</h2><p style="font-size:16px;line-height:1.5">Hi User,<br><br>We received a request to reset your EcoBazar account password. Click the button below to set a new password:</p><p style="text-align:center;margin:40px 0"><a href="http://localhost:5000/resetpasswor/${token}" style="background-color:#2e7d32;color:#fff;text-decoration:none;padding:14px 28px;border-radius:5px;font-size:16px;display:inline-block">Reset Password</a></p><p style="font-size:14px;color:#666">This link will expire in 30 minutes. If you didn’t request a password reset, please ignore this email — your password will remain unchanged.</p><p style="font-size:14px;color:#666;margin-top:30px">Best regards,<br>The EcoBazar Team</p></td></tr><tr><td align="center" bgcolor="#f0f0f0" style="padding:20px;font-size:12px;color:#777">© 2026 EcoBazar. All rights reserved.<br><a href="[UNSUBSCRIBE_LINK]" style="color:#2e7d32;text-decoration:none">Unsubscribe</a></td></tr></table></td></tr></table></body>`, 
+            });
+
+            console.log("Message sent: %s", info.messageId);
+            // Preview URL is only available when using an Ethereal test account
+            console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+        } catch (err) {
+            console.error("Error while sending mail:", err);
+        } 
+
+}
+
+module.exports = {emailverification, resetPasswordmail}
