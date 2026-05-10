@@ -2,7 +2,9 @@ require('dotenv').config();
 const express = require('express')
 const cors = require('cors')
 const dbConfig = require('./config/dbConfig');
-const { registrationController, loginController, forgetPasswordController, resetPasswordController, resendverificationemailcontroller } = require('./controllers/authController');
+const { registrationController, loginController, forgetPasswordController, resetPasswordController, resendverificationemailcontroller, verifyEmailController } = require('./controllers/authController');
+const { registrationlimiter, loginlimiter, forgetPasswordlimiter } = require('./utils/limiter');
+const { getAllUsersController, singleUserDataController, updateUserController, deleteUserController } = require('./controllers/userController');
 
 
 //Middleware
@@ -16,12 +18,22 @@ dbConfig()
 //     res.send("Done")
 // })
 
-app.post('/registration', registrationController)
-app.post('/login', loginController)
-app.post('/forgetpassword', forgetPasswordController)
+app.post('/registration', registrationlimiter, registrationController)
+app.post('/login', loginlimiter, loginController)
+app.post('/forgetpassword', forgetPasswordlimiter, forgetPasswordController)
 app.post('/resetpassword/:token', resetPasswordController)
 app.post('/resendverificationemail', resendverificationemailcontroller)
+app.post('/verifyemail/:token', verifyEmailController)
 
+// Product Create
+
+// Order Management
+
+// User Management
+app.get('/allusers', getAllUsersController)
+app.get('/singleuser/:id', singleUserDataController)
+app.post('/updateuser/:id', updateUserController)
+app.delete('/deleteuser/:id', deleteUserController)
 
 
 const port = process.env.PORT || 5000

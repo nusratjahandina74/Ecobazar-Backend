@@ -1,5 +1,5 @@
 const mongoose = require('mongoose')
-const {Schema} = mongoose
+const { Schema } = mongoose
 const userSchema = new Schema({
     firstName: {
         type: String
@@ -28,7 +28,7 @@ const userSchema = new Schema({
     },
     role: {
         type: String,
-        enum: ['admin','user','editor','vendor'],
+        enum: ['admin', 'user', 'editor', 'vendor'],
         default: 'user'
     },
     isHold: {
@@ -37,32 +37,32 @@ const userSchema = new Schema({
     },
     billingAdress: {
         firstName: {
-        type: String
-    },
-    LastName: {
-        type: String
-    },
-    email: {
-        type: String
-    },
-    companyName: {
-        type: String
-    },
-    street: {
-        type: String
-    },
-    state: {
-        type: String
-    },
-    zipCOde: {
-        type: String
-    },
-    phoneNumber: {
-        type: String
-    },
-    country: {
-        type: String
-    }
+            type: String
+        },
+        LastName: {
+            type: String
+        },
+        email: {
+            type: String
+        },
+        companyName: {
+            type: String
+        },
+        street: {
+            type: String
+        },
+        state: {
+            type: String
+        },
+        zipCOde: {
+            type: String
+        },
+        phoneNumber: {
+            type: String
+        },
+        country: {
+            type: String
+        }
     }
 })
-module.exports = mongoose.model('User',userSchema)
+module.exports = mongoose.model('User', userSchema)
