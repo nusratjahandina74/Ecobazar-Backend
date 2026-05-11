@@ -11,14 +11,14 @@ const registrationController = async (req, res) => {
         emptyFieldValidation(res, email, password, confirmPassword, terms)
 
         if (!terms) {
-            return res.status(400).send({
+            return res.status(400).json({
                 success: false,
                 message: "Please accept our Terms and Conditions."
             })
         }
 
         if (password !== confirmPassword) {
-            return res.status(400).send({
+            return res.status(400).json({
                 success: false,
                 message: "Passwords do not match."
             })
@@ -27,7 +27,7 @@ const registrationController = async (req, res) => {
 
         const existingUser = await User.findOne({ email: email })
         if (existingUser) {
-            return res.status(409).send({
+            return res.status(409).json({
                 success: false,
                 message: "User already exists with this email."
             })
@@ -46,14 +46,18 @@ const registrationController = async (req, res) => {
         }, process.env.ACCESS_TOKEN_SECRET, '1d')
 
         emailverification(token, email)
-        return res.status(201).send({
+        return res.status(201).json({
             success: true,
-            message: "Registration Successfully Done"
+            message: "Registration Successfully Done",
+            user: {
+                id: user._id,
+                email: user.email
+            }
         })
 
     } catch (error) {
         // console.error("Error:", err);
-        res.status(500).send({
+        res.status(500).json({
             success: false,
             message: "Internal server error."
         })
@@ -65,7 +69,7 @@ const loginController = async (req, res) => {
         emptyFieldValidation(res, email, password)
         const existingUser = await User.findOne({ email: email })
         if (!existingUser) {
-            return res.status(409).send({
+            return res.status(409).json({
                 success: false,
                 message: "User not found"
             })
@@ -73,7 +77,7 @@ const loginController = async (req, res) => {
         const pass = bcrypt.compareSync(password, existingUser.password);
 
         if (!pass) {
-            return res.status(401).send({
+            return res.status(401).json({
                 success: false,
                 message: "Invalid Credential"
             })
@@ -97,7 +101,7 @@ const forgetPasswordController = async (req, res) => {
         emptyFieldValidation(res, email)
         const existingUser = await User.findOne({ email: email })
         if (!existingUser) {
-            return res.status(409).send({
+            return res.status(409).json({
                 success: false,
                 message: "Email not found"
             })
@@ -108,7 +112,7 @@ const forgetPasswordController = async (req, res) => {
         }, process.env.ACCESS_TOKEN_SECRET, '1d')
 
         resetPasswordmail(token, email)
-        res.status(200).send({
+        res.status(200).json({
             success: true,
             message: "Please check your email"
         })
@@ -126,7 +130,7 @@ const resetPasswordController = async (req, res) => {
         const { newPassword, confirmPassword } = req.body
         const { token } = req.params
         if (newPassword !== confirmPassword) {
-            return res.status(400).send({
+            return res.status(400).json({
                 success: false,
                 message: "Confirm Password not matched."
             })
@@ -134,14 +138,14 @@ const resetPasswordController = async (req, res) => {
 
         jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, async function (err, decoded) {
             if (err) {
-                return res.status(401).send({
+                return res.status(401).json({
                     success: false,
                     message: "Invalid or expired token"
                 });
             } else {
                 const hash = bcrypt.hashSync(newPassword, 10);
                 const updatePassword = await User.findByIdAndUpdate({ _id: decoded.id }, { password: hash }, { new: true })
-                return res.status(200).send({
+                return res.status(200).json({
                     success: true,
                     message: "Password Updated Successfully"
                 })
@@ -165,7 +169,7 @@ const resendverificationemailcontroller = async (req, res) => {
         }, process.env.ACCESS_TOKEN_SECRET, '1d')
 
         emailverification(token, email)
-        return res.status(200).send({
+        return res.status(200).json({
             success: true,
             message: "Verification email sent. Please check your inbox."
         })
@@ -187,14 +191,14 @@ const verifyEmailController = async (req, res) => {
                 const userId = decoded.id
                 const findUser = await User.findById(userId)
                 if (findUser.isVerified) {
-                    return res.status(400).send({
+                    return res.status(400).json({
                         success: false,
                         message: "User already verified"
                     })
                 } else {
                     findUser.isVerified = true
                     await findUser.save()
-                    return res.status(200).send({
+                    return res.status(200).json({
                         success: true,
                         message: "Email verified successfully"
                     })
