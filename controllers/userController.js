@@ -60,7 +60,7 @@ const updateUserController = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Profile Update Sccessfully Done",
-            data: data
+            data: userData
         })
     } catch (error) {
         console.log(error);

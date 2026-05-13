@@ -48,7 +48,7 @@ const registrationController = async (req, res) => {
         emailverification(token, email)
         return res.status(201).json({
             success: true,
-            message: "Registration Successfully Done",
+            message: "Registration Successfully Done, Please check your email for verification.",
             user: {
                 id: user._id,
                 email: user.email
