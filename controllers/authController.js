@@ -67,7 +67,7 @@ const loginController = async (req, res) => {
     try {
         const { email, password } = req.body
         emptyFieldValidation(res, email, password)
-        const existingUser = await User.findOne({ email: email })
+        const existingUser = await User.findOne({ email: email }).select('+password')
         if (!existingUser) {
             return res.status(409).json({
                 success: false,
