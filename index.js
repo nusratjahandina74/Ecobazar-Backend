@@ -2,7 +2,8 @@ require('dotenv').config();
 const express = require('express')
 const cors = require('cors')
 const dbConfig = require('./config/dbConfig');
-const { swaggerUi, swaggerSpecs } = require('./swagger/swaggerConfig');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./config/swaggerConfig');
 // const { registrationController, loginController, forgetPasswordController, resetPasswordController, resendverificationemailcontroller, verifyEmailController } = require('./controllers/authController');
 // const { registrationlimiter, loginlimiter, forgetPasswordlimiter } = require('./utils/limiter');
 // const { getAllUsersController, singleUserDataController, updateUserController, deleteUserController } = require('./controllers/userController');
