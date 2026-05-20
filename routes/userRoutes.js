@@ -5,8 +5,7 @@ const {
     singleUserDataController, 
     updateUserController, 
     deleteUserController 
-} = require('../controllers/userController'); // Path thik kora hoyeche
-
+} = require('../controllers/userController'); 
 /**
  * @openapi
  * /allusers:

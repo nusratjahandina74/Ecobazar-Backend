@@ -4,16 +4,16 @@ const userSchema = new Schema({
     firstName: {
         type: String,
         trim: true,
-        maxlength: [50, "First name cannot exceed 50 characters"]
+        maxlength: [50, 'First name cannot exceed 50 characters']
     },
     lastName: {
         type: String,
         trim: true,
-        maxlength: [50, "Last name cannot exceed 50 characters"]
+        maxlength: [50, 'Last name cannot exceed 50 characters']
     },
     email: {
         type: String,
-        required: [true, "Email is required"],
+        required: [true, 'Email is required'],
         unique: true,
         index: true,
         lowercase: true,
@@ -21,7 +21,7 @@ const userSchema = new Schema({
     },
     password: {
         type: String,
-        required: [true, "Password validation parameters required"],
+        required: [true, 'Password validation parameters required'],
         select: false
     },
     phoneNumber: {
@@ -32,7 +32,7 @@ const userSchema = new Schema({
     },
     terms: {
         type: Boolean,
-        required: [true, "Terms agreement execution context state flag status parameters required"]
+        required: [true, 'Terms agreement execution context state flag status parameters required']
     },
     profile: {
         type: String

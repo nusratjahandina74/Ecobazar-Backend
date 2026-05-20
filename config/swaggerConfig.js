@@ -31,6 +31,7 @@ const options = {
         }
       },
       schemas: {
+        // ==== AUTH & USER SCHEMAS ====
         RegistrationInput: {
           type: 'object',
           required: ['name', 'email', 'password', 'terms'],
@@ -66,7 +67,6 @@ const options = {
             confirmPassword: { type: 'string', format: 'password', minLength: 8, example: 'NewSecr3tP@ss' }
           }
         },
-
         RegisterResponse: {
           type: 'object',
           properties: {
@@ -112,21 +112,68 @@ const options = {
           type: 'object',
           properties: {
             success: { type: 'boolean', example: false },
-            message: { type: 'string', description: 'Generic system level tracking validation error fallback message description.', example: 'Internal server error exception logs trace' }
+            message: { type: 'string', description: 'Generic validation error description.', example: 'Internal server error exception logs trace' }
+          }
+        },
+
+        // ---- NEW PRODUCT SCHEMA COMPONENTS INTEGRATED HERE ----
+        ProductImage: {
+          type: 'object',
+          properties: {
+            url: { type: 'string', example: "https://cloudinary.com" },
+            isMain: { type: 'boolean', default: false, example: true }
+          }
+        },
+        ProductInput: {
+          type: 'object',
+          required: ['title', 'price', 'category'],
+          properties: {
+            title: { type: 'string', description: 'Unique catalog item header title.', example: 'Organic Raw Green Tea' },
+            description: { type: 'string', example: 'Handpicked organic green tea leaves rich in antioxidants.' },
+            price: { type: 'number', example: 15.50 },
+            discountPrice: { type: 'number', example: 12.00 },
+            stock: { type: 'number', default: 0, example: 50 },
+            shortDescription: { type: 'string', example: '100% Pure Natural Tea Leaves.' },
+            category: { type: 'string', example: 'Beverages' },
+            subCategory: { type: 'string', example: 'Teas' },
+            tag: { type: 'array', items: { type: 'string' }, example: ['organic', 'herbal', 'green-tea'] },
+            additionalInfo: { type: 'string', example: 'Net Weight: 250g, Shelf Life: 12 Months' },
+            status: { type: 'string', enum: ['pending', 'active', 'inactive'], default: 'pending', example: 'active' },
+            images: { type: 'array', items: { $ref: '#/components/schemas/ProductImage' } }
+          }
+        },
+        ProductResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Product operation successful' },
+            data: {
+              type: 'object',
+              properties: {
+                _id: { type: 'string', example: '651c6c5a3d7b42001f3e721a' },
+                title: { type: 'string', example: 'Organic Raw Green Tea' },
+                sku: { type: 'string', example: '1716315840000-2026' },
+                price: { type: 'number', example: 15.50 },
+                category: { type: 'string', example: 'Beverages' },
+                status: { type: 'string', example: 'pending' },
+                createdAt: { type: 'string', format: 'date-time', example: '2026-05-20T17:15:00.000Z' },
+                updatedAt: { type: 'string', format: 'date-time', example: '2026-05-20T17:15:00.000Z' }
+              }
+            }
           }
         }
       }
     }
   },
-
   apis: ['./routes/*.js', './routes/**/*.js'], 
 };
 
 const swaggerSpecs = swaggerJsdoc(options);
+
+
 const swaggerDocs = (app, port) => {
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
-  console.log(`Eco Bazar Automated Swagger API Documentation Mounted Active`);
-  console.log(`Portal View Gateway Accessible Live At: http://localhost:${process.env.PORT || 5000}/api-docs`);
+  console.log(`http://localhost:${port}/api-docs`);
 };
 
-module.exports = swaggerSpecs 
+module.exports = swaggerDocs;
