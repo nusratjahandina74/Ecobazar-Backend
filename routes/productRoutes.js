@@ -7,7 +7,8 @@ const {
     updateProductController,
     deleteProductController
 } = require('../controllers/productController');
-
+const createUploader = require('../utils/uploader');
+const upload = createUploader('products');
 /**
  * @swagger
  * components:
@@ -22,57 +23,6 @@ const {
  *           type: boolean
  *           default: false
  *           example: true
- *     
- *     ProductInput:
- *       type: object
- *       required:
- *         - title
- *         - price
- *         - category
- *       properties:
- *         title:
- *           type: string
- *           description: Unique title of the product
- *           example: "Eco-Friendly Bamboo Water Bottle"
- *         description:
- *           type: string
- *           example: "Premium quality reusable bamboo bottle with vacuum insulation."
- *         price:
- *           type: number
- *           example: 25.99
- *         discountPrice:
- *           type: number
- *           example: 19.99
- *         stock:
- *           type: number
- *           default: 0
- *           example: 150
- *         shortDescription:
- *           type: string
- *           example: "100% Organic Bamboo Bottle 500ml."
- *         category:
- *           type: string
- *           example: "Kitchenware"
- *         subCategory:
- *           type: string
- *           example: "Bottles"
- *         tag:
- *           type: array
- *           items:
- *             type: string
- *           example: ["eco", "bamboo", "bottle"]
- *         additionalInfo:
- *           type: string
- *           example: "Weight: 300g, Dimensions: 25x7 cm"
- *         status:
- *           type: string
- *           enum: [pending, active, inactive]
- *           default: pending
- *           example: "active"
- *         images:
- *           type: array
- *           items:
- *             $ref: '#/components/schemas/ProductImage'
  * 
  *     ProductResponse:
  *       type: object
@@ -124,9 +74,56 @@ const {
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
- *             $ref: '#/components/schemas/ProductInput'
+ *             type: object
+ *             required:
+ *               - title
+ *               - price
+ *               - category
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: "Eco-Friendly Bamboo Water Bottle"
+ *               description:
+ *                 type: string
+ *                 example: "Premium quality reusable bamboo bottle with vacuum insulation."
+ *               price:
+ *                 type: number
+ *                 example: 25.99
+ *               discountPrice:
+ *                 type: number
+ *                 example: 19.99
+ *               stock:
+ *                 type: number
+ *                 example: 150
+ *               shortDescription:
+ *                 type: string
+ *                 example: "100% Organic Bamboo Bottle 500ml."
+ *               category:
+ *                 type: string
+ *                 example: "Kitchenware"
+ *               subCategory:
+ *                 type: string
+ *                 example: "Bottles"
+ *               tag:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["eco", "bamboo", "bottle"]
+ *               additionalInfo:
+ *                 type: string
+ *                 example: "Weight: 300g, Dimensions: 25x7 cm"
+ *               status:
+ *                 type: string
+ *                 enum: [pending, active, inactive]
+ *                 example: "active"
+ *               photos:
+ *                 type: array
+ *                 description: Upload product photos (Max 5 files)
+ *                 items:
+ *                   type: string
+ *                   format: binary
  *     responses:
  *       201:
  *         description: Product created successfully
@@ -136,14 +133,10 @@ const {
  *               $ref: '#/components/schemas/ProductResponse'
  *       400:
  *         description: Missing fields input validation error, negative prices, or unique title duplicate collision
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
  *         description: Internal server error
  */
-router.post('/createproduct', createProductController);
+router.post('/createproduct', upload.array('photos', 5), createProductController);
 
 /**
  * @swagger
@@ -236,7 +229,7 @@ router.get('/singleproduct/:id', singleProductController);
  *       404:
  *         description: Target product record matrix not found
  */
-router.post('/updateproduct/:id', updateProductController);
+router.post('/updateproduct/:id', upload.array('photos', 5), updateProductController);
 
 /**
  * @swagger
