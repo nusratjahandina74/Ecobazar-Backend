@@ -8,7 +8,7 @@ const {
     resendverificationemailcontroller, 
     verifyEmailController 
 } = require('../controllers/authController');
-const { registrationlimiter, loginlimiter, forgetPasswordlimiter } = require('../utils/limiter');
+const { registrationLimiter, loginLimiter, forgetPasswordLimiter } = require('../middleware/rateLimtMiddleware');
 
 /**
  * @openapi
@@ -74,7 +74,7 @@ const { registrationlimiter, loginlimiter, forgetPasswordlimiter } = require('..
  *       500:
  *         description: Internal server error.
  */
-router.post('/registration', registrationlimiter, registrationController);
+router.post('/registration', registrationLimiter , registrationController);
 
 /**
  * @openapi
@@ -122,7 +122,7 @@ router.post('/registration', registrationlimiter, registrationController);
  *       500:
  *         description: Internal server error.
  */
-router.post('/login', loginlimiter, loginController);
+router.post('/login', loginLimiter, loginController);
 
 /**
  * @openapi
@@ -152,7 +152,7 @@ router.post('/login', loginlimiter, loginController);
  *       500:
  *         description: Internal server error.
  */
-router.post('/forgetpassword', forgetPasswordlimiter, forgetPasswordController);
+router.post('/forgetpassword', forgetPasswordLimiter, forgetPasswordController);
 
 /**
  * @openapi
