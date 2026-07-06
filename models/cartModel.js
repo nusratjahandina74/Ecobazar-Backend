@@ -11,6 +11,10 @@ const cartSchema = new Schema({
         min: 1,
         required: true
     },
+    totalPrice: {
+        type: Number, 
+        required: true 
+    },
     price: { 
         type: Number, 
         required: true 
@@ -21,4 +25,5 @@ const cartSchema = new Schema({
         required: true
     },
 })
+cartSchema.index({ product: 1, user: 1 }, { unique: true });
 module.exports = mongoose.model('Cart',cartSchema)

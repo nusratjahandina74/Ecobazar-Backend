@@ -16,23 +16,28 @@ const {
 
 /**
  * @swagger
- * /api/cart/createcart/{proId}/{userId}:
+ * /api/cart/createcart:
  *   post:
  *     summary: Add a product to the cart or increase quantity if already exists
  *     tags: [Cart]
- *     parameters:
- *       - in: path
- *         name: proId
- *         required: true
- *         schema:
- *           type: string
- *         description: The Product MongoDB ID
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: The User MongoDB ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - proId
+ *               - userId
+ *             properties:
+ *               proId:
+ *                 type: string
+ *                 description: The Product MongoDB ID
+ *                 example: "6a2970aa4df96e9a223a9fbc"
+ *               userId:
+ *                 type: string
+ *                 description: The User MongoDB ID
+ *                 example: "6a00a417e546ae90593e7ea0"
  *     responses:
  *       201:
  *         description: Product added to cart successfully
@@ -43,7 +48,7 @@ const {
  *       500:
  *         description: Internal server error
  */
-router.post('/createcart/:proId/:userId', createCartController);
+router.post('/createcart', createCartController);
 
 /**
  * @swagger

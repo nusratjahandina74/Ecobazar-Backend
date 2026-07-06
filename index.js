@@ -7,6 +7,8 @@ const swaggerDocs = require('./config/swaggerConfig');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/productRoutes');
+const cartRoutes = require('./routes/cartRoute');
+const paymentRoutes = require('./routes/paymentRoutes')
 
 
 const app = express();
@@ -19,6 +21,8 @@ dbConfig();
 app.use('/', authRoutes); 
 app.use('/', userRoutes); 
 app.use('/', productRoutes); 
+app.use('/',cartRoutes)
+app.use('/',paymentRoutes)
 
 
 const port = process.env.PORT || 5000;

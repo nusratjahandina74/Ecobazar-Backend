@@ -1,8 +1,25 @@
+const mongoose = require('mongoose')
 const Product = require('../models/productModel')
 const Cart = require('../models/cartModel')
 const createCartController = async (req, res) => {
     try {
-        const { proId, userId } = req.params
+        let { proId, userId } = req.body
+        if (!proId || !userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Product ID and User ID are required"
+            });
+        }
+        proId = proId.toString().trim();
+        userId = userId.toString().trim();
+        if (!mongoose.Types.ObjectId.isValid(proId) || !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid Product ID or User ID format"
+            });
+        }
+        proId = new mongoose.Types.ObjectId(proId);
+        userId = new mongoose.Types.ObjectId(userId);
         const existingProduct = await Product.findById(proId)
         if (!existingProduct) {
             return res.status(404).json({
@@ -10,9 +27,27 @@ const createCartController = async (req, res) => {
                 message: 'Product Not Found'
             })
         }
-        let cartItem = await Cart.findOne({ product: proId, user: userId })
+        if (existingProduct.stock <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "This product is currently out of stock"
+            });
+        }
+        const finalPrice = (existingProduct.discountPrice && existingProduct.discountPrice > 0) 
+            ? existingProduct.discountPrice 
+            : existingProduct.price;
+        let cartItem = await Cart.findOne({ product: proId, user: userId });
         if (cartItem) {
-            cartItem.quantity += 1;
+            const newQuantity = cartItem.quantity + 1;
+            if (newQuantity > existingProduct.stock) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Cannot add more. Only ${existingProduct.stock} items left in stock.`
+                });
+            }
+            cartItem.quantity = newQuantity;
+            cartItem.price = finalPrice; 
+            cartItem.totalPrice = cartItem.quantity * finalPrice;
             await cartItem.save();
             return res.status(200).json({
                 success: true,
@@ -23,7 +58,8 @@ const createCartController = async (req, res) => {
         const cart = new Cart({
             product: proId,
             quantity: 1,
-            price: existingProduct.price,
+            price: finalPrice,
+            totalPrice: finalPrice,
             user: userId
         })
         await cart.save()
@@ -42,41 +78,70 @@ const createCartController = async (req, res) => {
 }
 const increDecreCartController = async (req, res) => {
     try {
-        const { id } = req.params
-        const { type } = req.body
-        const cartItem = await Cart.findById(id)
+        const { id } = req.params;
+        const { type, userId } = req.body;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid Cart Item ID format"
+            });
+        }
+        const cartItem = await Cart.findOne({ _id: id, user: userId }).populate('product');
         if (!cartItem) {
             return res.status(404).json({
                 success: false,
-                message: "Cart item not found"
-            })
+                message: "This product does not exist in this user's cart"
+            });
         }
         if (type === 'plus') {
-            cartItem.quantity += 1
+            if (!cartItem.product) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Associated product details not found"
+                });
+            }
+            const finalPrice = (cartItem.product.discountPrice && cartItem.product.discountPrice > 0) 
+                ? cartItem.product.discountPrice 
+                : cartItem.product.price;
+            const nextQuantity = cartItem.quantity + 1;
+            cartItem.price = finalPrice;
+            cartItem.totalPrice = cartItem.quantity * finalPrice;
+            if (nextQuantity > cartItem.product.stock) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Cannot increase quantity. Maximum stock limit reached (${cartItem.product.stock} available).`
+                });
+            }
+            cartItem.quantity = nextQuantity;
         } else {
             if (cartItem.quantity > 1) {
-                cartItem.quantity -= 1
+                cartItem.quantity -= 1;
+                const finalPrice = (cartItem.product && cartItem.product.discountPrice && cartItem.product.discountPrice > 0) 
+                    ? cartItem.product.discountPrice 
+                    : cartItem.price;
+                cartItem.price = finalPrice;
+                cartItem.totalPrice = cartItem.quantity * finalPrice;
             } else {
                 return res.status(400).json({
                     success: false,
                     message: "Quantity cannot be less than 1"
-                })
+                });
             }
         }
-        await cartItem.save()
+        await cartItem.save();
         return res.status(200).json({
             success: true,
             message: "Cart updated successfully",
             data: cartItem
         });
-    } catch (error) {
+    }  catch (error) {
         console.log(error);
         return res.status(500).json({
             success: false,
             message: "Internal server error"
-        })
+        });
     }
-}
+};
 const deleteCartController = async (req, res) => {
     try {
         const { id } = req.params
@@ -103,7 +168,7 @@ const deleteCartController = async (req, res) => {
 const getCartController = async (req, res) => {
     try {
         const { id } = req.params
-        const getCart = await Cart.find({ user: id })
+        const getCart = await Cart.find({ user: id }).populate('product')
         if (!getCart || getCart.length === 0) {
             return res.status(404).json({
                 success: false,
@@ -111,11 +176,12 @@ const getCartController = async (req, res) => {
             });
         }
         let totalPrice = 0
-        getCart.map(item => {
-            if (item.price && item.quantity) {
-                totalPrice += item.price * item.quantity;
+        getCart.forEach(item => {
+            const currentPrice = item.price || (item.product && item.product.price) || 0;
+            if (item.quantity) {
+                totalPrice += currentPrice * item.quantity;
             }
-        })
+        });
         return res.status(200).json({
             success: true,
             message: "Cart fetched successfully",

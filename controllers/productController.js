@@ -3,10 +3,10 @@ const Product = require('../models/productModel')
 const { emptyFieldValidation } = require('../utils/validation');
 const createProductController = async (req, res) => {
     try {
-        const { title, price, category } = req.body
+        const { title, price, category, stock } = req.body
 
         //Validation check ebong ekhanei controller thamanor bebostha
-        const hasError = emptyFieldValidation(res, title, price, category);
+        const hasError = emptyFieldValidation(res, title, price, category, stock);
         if (hasError || res.headersSent) return;
 
         const titlExist = await Product.findOne({ title: title });
@@ -21,6 +21,12 @@ const createProductController = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Price must be greater than 0"
+            });
+        }
+        if (Number(stock) < 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Stock quantity cannot be less than 0"
             });
         }
 
@@ -123,6 +129,12 @@ const updateProductController = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Price must be greater than 0"
+            });
+        }
+        if (req.body.stock !== undefined && Number(req.body.stock) < 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Stock quantity cannot be less than 0"
             });
         }
 
