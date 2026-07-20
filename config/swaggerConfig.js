@@ -14,7 +14,7 @@ const options = {
       }
     },
     servers: [
-      { 
+      {
         url: `http://localhost:${process.env.PORT || 5000}`,
         description: 'Development Server'
       }
@@ -116,7 +116,6 @@ const options = {
           }
         },
 
-        // ---- NEW PRODUCT SCHEMA COMPONENTS INTEGRATED HERE ----
         ProductImage: {
           type: 'object',
           properties: {
@@ -161,19 +160,53 @@ const options = {
               }
             }
           }
+        },
+
+        CartItemInput: {
+          type: 'object',
+          required: ['productId', 'quantity'],
+          properties: {
+            productId: { type: 'string', example: '651c6c5a3d7b42001f3e721a' },
+            quantity: { type: 'number', minimum: 1, example: 2 }
+          }
+        },
+        PaymentInitiateInput: {
+          type: 'object',
+          required: ['userId', 'cus_name', 'cus_email', 'cus_add1', 'cus_city', 'cus_postcode', 'cus_phone'],
+          description: "Secure Checkout Input Model. Total prices are verified strictly server-side.",
+          properties: {
+            userId: { type: 'string', example: '6a00a417e546ae90593e7ea0' },
+            cus_name: { type: 'string', example: 'Nusrat Jahan Dina' },
+            cus_email: { type: 'string', format: 'email', example: 'nusrat@example.com' },
+            cus_add1: { type: 'string', example: 'House 12, Road 5' },
+            cus_add2: { type: 'string', example: 'Dhanmondi' },
+            cus_city: { type: 'string', example: 'Dhaka' },
+            cus_state: { type: 'string', example: 'Dhaka' },
+            cus_postcode: { type: 'string', example: '1209' },
+            cus_phone: { type: 'string', example: '01712345678' }
+          }
+        },
+        PaymentInitiateResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Payment link generated successfully' },
+            paymentUrl: { type: 'string', example: 'https://aamarpay.com' },
+            orderId: { type: 'string', example: '651c72bb3d7b42001f3e725c' },
+            transactionId: { type: 'string', example: 'TXN-1716315840000-9584' }
+          }
         }
       }
     }
   },
-  apis: ['./routes/*.js', './routes/**/*.js'], 
+  apis: ['./routes/*.js', './routes/**/*.js'],
 };
 
 const swaggerSpecs = swaggerJsdoc(options);
 
-
 const swaggerDocs = (app, port) => {
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
-  console.log(`http://localhost:${port}/api-docs`);
+  console.log(`Swagger Docs available at: http://localhost:${port}/api-docs`);
 };
 
 module.exports = swaggerDocs;
