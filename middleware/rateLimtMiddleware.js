@@ -1,0 +1,46 @@
+const { rateLimit } = require('express-rate-limit')
+// Strict limits only in production (NODE_ENV=production). While developing/testing you would otherwise
+// lock yourself out after a few attempts.
+const dev = process.env.NODE_ENV !== 'production'
+const lim = (prod) => (dev ? 1000 : prod)
+const registrationLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: lim(5),
+    message: {
+        success: false,
+        message: "Too many registration attempts, please try again after 15 minutes."
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+})
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: lim(10),
+    message: {
+        success: false,
+        message: "Too many login attempts, please try again later."
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+})
+const forgetPasswordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: lim(5),
+    message: {
+        success: false,
+        message: "Too many login attempts, please try again later."
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+})
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: lim(5),
+    message: {
+        success: false,
+        message: "Too many attempts, please try again later."
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+})
+module.exports = { registrationLimiter, loginLimiter, forgetPasswordLimiter, apiLimiter };
