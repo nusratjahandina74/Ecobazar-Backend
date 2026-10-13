@@ -3,9 +3,7 @@ const mongoose = require('mongoose');
 const connect = async () => mongoose.connect(process.env.MONGODB_URL, { serverSelectionTimeoutMS: 10000 });
 
 const syncIndexes = async () => {
-    // Removes stale indexes left by older versions of the schema (e.g. a non-sparse unique phoneNumber index
-    // makes the 2nd registration fail with a duplicate-key error). Data is not touched.
-    for (const name of ['User', 'Product', 'Cart', 'Order']) {
+    for (const name of ['User', 'Product', 'Cart', 'Order', 'Wishlist']) {
         try { await mongoose.model(name).syncIndexes(); }
         catch (e) { console.error(`[db] syncIndexes(${name}) skipped:`, e.message); }
     }
@@ -19,7 +17,6 @@ const dbConfig = async () => {
     try {
         await connect();
     } catch (error) {
-        // Some networks cannot resolve mongodb+srv:// records -> retry once with public DNS
         if (/querySrv|ECONNREFUSED|ENOTFOUND/i.test(error.message)) {
             try {
                 require('node:dns').setServers(['1.1.1.1', '8.8.8.8']);

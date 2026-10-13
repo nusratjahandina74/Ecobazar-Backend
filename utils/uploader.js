@@ -3,7 +3,6 @@ const path = require('path');
 const fs = require('fs');
 
 const createUploader = (folderName) => {
-  // Absolute path (independent of the directory the server is started from)
   const dir = path.join(__dirname, '..', 'uploads', folderName);
   fs.mkdirSync(dir, { recursive: true });
 

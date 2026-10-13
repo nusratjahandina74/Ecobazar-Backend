@@ -2,15 +2,12 @@ const axios = require("axios");
 const Cart = require('../models/cartModel');
 const Order = require('../models/orderModel');
 
-// ---- configuration (all overridable from .env; see .env.example) ----
 const BACKEND_URL = () => process.env.BACKEND_URL || "http://localhost:5000";
 const FRONTEND_URL = () => process.env.FRONTEND_URL || "http://localhost:5173";
 const GATEWAY = () => ({
   storeId: process.env.AAMARPAY_STORE_ID || "aamarpaytest",
-  // aamarPay's public sandbox key is the default; set your own key in production.
   signatureKey: process.env.AAMARPAY_SIGNATURE_KEY || "dbb74894e82415a2f7ff0ec3a97e4183",
   apiUrl: process.env.AAMARPAY_API_URL || "https://sandbox.aamarpay.com/jsonpost.php",
-  // optional server-to-server verification endpoint; when set, a payment is only marked Paid if it confirms
   verifyUrl: process.env.AAMARPAY_VERIFY_URL || ""
 });
 
@@ -21,7 +18,6 @@ const REQUIRED = ['cus_name', 'cus_email', 'cus_add1', 'cus_city', 'cus_postcode
 
 const paymentController = async (req, res) => {
   const body = req.body || {};
-  // The authenticated session decides whose cart is charged (body.userId is ignored).
   const userId = req.user.id;
 
   const missing = REQUIRED.filter((k) => !body[k] || !String(body[k]).trim());
@@ -36,8 +32,6 @@ const paymentController = async (req, res) => {
     if (!cart || cart.length === 0) {
       return res.status(400).json({ success: false, message: "Cart is empty" });
     }
-
-    // Amounts are recomputed on the server from current product prices — the browser never sends an amount.
     let dbTotalPrice = 0;
     const pro = [];
     for (const item of cart) {
@@ -140,7 +134,6 @@ const paymentController = async (req, res) => {
   }
 };
 
-// Optional server-to-server confirmation. Returns true/false; null when verification is not configured.
 const verifyWithGateway = async (transactionId) => {
   const g = GATEWAY();
   if (!g.verifyUrl) return null;
@@ -177,7 +170,6 @@ const paymentSuccessController = async (req, res) => {
     }
 
     const body = req.body || {};
-    // The gateway posts pay_status + amount to the success URL. Anything else is NOT treated as paid.
     const statusOk = String(body.pay_status || '').toLowerCase() === 'successful';
     const amountOk = body.amount === undefined || Number(body.amount) === Number(order.totalAmount);
     let verified = statusOk && amountOk;

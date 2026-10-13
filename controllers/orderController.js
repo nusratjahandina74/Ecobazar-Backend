@@ -4,10 +4,8 @@ const Order = require('../models/orderModel');
 
 const ORDER_STATUSES = ['Order Placed', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
 
-// Never expose the raw gateway payload to the browser.
 const SAFE_FIELDS = '-gatewayResponse -__v';
 
-// GET /myorders  (authenticated) — only the caller's own orders
 const myOrdersController = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user.id }).select(SAFE_FIELDS).sort({ createdAt: -1 });
@@ -17,8 +15,6 @@ const myOrdersController = async (req, res) => {
     return sendError(res, error);
   }
 };
-
-// GET /orderbytransaction/:txnId  (authenticated) — owner or admin; used by /order-success to show the VERIFIED status
 const orderByTransactionController = async (req, res) => {
   try {
     const order = await Order.findOne({ transactionId: req.params.txnId }).select(SAFE_FIELDS);
@@ -32,7 +28,6 @@ const orderByTransactionController = async (req, res) => {
   }
 };
 
-// GET /allorders  (admin only)
 const allOrdersController = async (req, res) => {
   try {
     const orders = await Order.find({}).select(SAFE_FIELDS).populate('user', 'email firstName lastName').sort({ createdAt: -1 });
@@ -43,7 +38,6 @@ const allOrdersController = async (req, res) => {
   }
 };
 
-// POST /updateorderstatus/:id  (admin only) body: { orderStatus }
 const updateOrderStatusController = async (req, res) => {
   try {
     const { id } = req.params;

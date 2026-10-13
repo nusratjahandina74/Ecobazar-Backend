@@ -11,6 +11,7 @@ const productRoutes = require('./routes/productRoutes');
 const cartRoutes = require('./routes/cartRoute');
 const paymentRoutes = require('./routes/paymentRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const wishlistRoutes = require('./routes/wishlistRoutes');
 
 ['MONGODB_URL', 'ACCESS_TOKEN_SECRET'].forEach((k) => {
     if (!process.env[k]) console.error(`[config] ${k} is missing in the backend .env file!`);
@@ -24,14 +25,10 @@ app.use(cors());
 app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
-
-// Uploaded product images (stored as /uploads/products/<file>)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// DB Connection
 dbConfig();
 
-// Fail fast (instead of hanging ~10s) when the database is not connected
 app.use((req, res, next) => {
     if (req.path.startsWith('/uploads')) return next();
     if (mongoose.connection.readyState !== 1) {
@@ -45,8 +42,8 @@ app.use('/', productRoutes);
 app.use('/', cartRoutes);
 app.use('/', paymentRoutes);
 app.use('/', orderRoutes);
+app.use('/', wishlistRoutes);
 
-// JSON error handler (multer upload errors, bad JSON, ...)
 app.use((err, req, res, next) => {
     if (res.headersSent) return next(err);
     const status = err.name === 'MulterError' ? (err.code === 'LIMIT_FILE_SIZE' ? 413 : 400) : (err.status || 400);

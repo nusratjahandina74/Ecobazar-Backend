@@ -1,6 +1,4 @@
-// One place that turns any thrown error into a useful JSON response (and logs the real cause).
 const isProd = process.env.NODE_ENV === 'production';
-
 const sendError = (res, error, fallback = 'Internal server error') => {
     console.error('[API ERROR]', error && error.stack ? error.stack : error);
     if (res.headersSent) return;
@@ -28,7 +26,7 @@ const sendError = (res, error, fallback = 'Internal server error') => {
         status = 503;
         message = 'Database is not reachable. Check MONGODB_URL, your internet / Atlas IP whitelist, and the backend console.';
     } else if (!isProd && msg) {
-        message = `${fallback}: ${msg}`; // helps while developing; hidden when NODE_ENV=production
+        message = `${fallback}: ${msg}`;
     }
 
     return res.status(status).json({ success: false, message });

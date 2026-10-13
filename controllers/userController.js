@@ -1,8 +1,6 @@
 const sendError = require('../utils/sendError');
 const mongoose = require('mongoose')
 const User = require('../models/userModel')
-
-// Fields any user may edit on their own profile. role / isHold / isVerified are admin-only.
 const SELF_FIELDS = ['firstName', 'lastName', 'phoneNumber', 'profile', 'billingAdress']
 const ADMIN_FIELDS = [...SELF_FIELDS, 'role', 'isHold', 'isVerified']
 const getAllUsersController = async (req, res) => {

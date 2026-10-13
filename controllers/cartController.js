@@ -5,7 +5,6 @@ const Cart = require('../models/cartModel')
 const createCartController = async (req, res) => {
     try {
         let { proId, userId } = req.body
-        // The session decides who the cart belongs to; a mismatching body userId is rejected.
         if (userId && String(userId) !== req.user.id && req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: "You can only modify your own cart" });
         }

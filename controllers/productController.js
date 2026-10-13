@@ -1,4 +1,6 @@
 const sendError = require('../utils/sendError');
+const Cart = require('../models/cartModel');
+const Wishlist = require('../models/wishlistModel');
 const { removeStoredImages, removeRequestFiles } = require('../utils/fileCleanup');
 const mongoose = require('mongoose');
 const Product = require('../models/productModel')
@@ -6,13 +8,23 @@ const { emptyFieldValidation } = require('../utils/validation');
 
 const PRODUCT_FIELDS = ['title', 'description', 'price', 'discountPrice', 'stock', 'shortDescription',
     'category', 'subCategory', 'tag', 'additionalInfo', 'status']
-
-// Uploaded files -> [{ url, isMain }]. Stored as a relative path (/uploads/products/<file>);
-// the frontend prefixes its API base URL. First image is the main one unless `hasMain` is true.
 const filesToImages = (files = [], hasMain = false) =>
     files.map((f, i) => ({ url: `/uploads/products/${f.filename}`, isMain: !hasMain && i === 0 }))
+const applyMain = (images, mainRef, addedStart = 0) => {
+    if (!images.length) return images
+    let idx = -1
+    if (mainRef) {
+        const m = /^new:(\d+)$/.exec(String(mainRef))
+        if (m) idx = addedStart + Number(m[1])
+        else idx = images.findIndex((i) => i.url === mainRef)
+    }
+    if (idx < 0 || idx >= images.length) idx = images.findIndex((i) => i.isMain)
+    if (idx < 0) idx = 0
+    const list = images.map((i, n) => ({ url: i.url, isMain: n === idx }))
+    const [main] = list.splice(idx, 1)
+    return [main, ...list]
+}
 
-// Pick only known fields; drop empty strings (multipart sends "" for blank inputs).
 const pickProductFields = (body) => {
     const data = {}
     PRODUCT_FIELDS.forEach((k) => {
@@ -27,11 +39,8 @@ const createProductController = async (req, res) => {
     res.on('finish', () => { if (res.statusCode >= 400) removeRequestFiles(req) })
     try {
         const { title, price, category, stock } = req.body
-
-        //Validation check ebong ekhanei controller thamanor bebostha
         const hasError = emptyFieldValidation(res, title, price, category, stock);
         if (hasError || res.headersSent) return;
-
         const titlExist = await Product.findOne({ title: title });
         if (titlExist) {
             return res.status(400).json({
@@ -65,7 +74,7 @@ const createProductController = async (req, res) => {
         const product = new Product({
             ...pickProductFields(req.body),
             sku: sku,
-            images: filesToImages(req.files)
+            images: applyMain(filesToImages(req.files), req.body.mainImage)
         });
         await product.save()
 
@@ -162,22 +171,18 @@ const updateProductController = async (req, res) => {
             })
         }
         const update = pickProductFields(req.body)
-
-        // Optional image handling (additive): `removeImages` = urls to drop, uploaded `photos` are appended (max 5 total)
         let remove = req.body.removeImages || []
         if (!Array.isArray(remove)) remove = [remove]
-        const kept = existing.images.filter((img) => !remove.includes(img.url))
-        const added = filesToImages(req.files, kept.some((i) => i.isMain))
+        const kept = existing.images.filter((img) => !remove.includes(img.url)).map((img) => ({ url: img.url, isMain: !!img.isMain }))
+        const added = filesToImages(req.files, true)
         if (kept.length + added.length > 5) {
             return res.status(400).json({
                 success: false,
                 message: "A product can have at most 5 images"
             })
         }
-        if (req.files?.length || remove.length) {
-            const merged = [...kept, ...added]
-            if (merged.length && !merged.some((i) => i.isMain)) merged[0].isMain = true
-            update.images = merged
+        if (req.files?.length || remove.length || req.body.mainImage) {
+            update.images = applyMain([...kept, ...added], req.body.mainImage, kept.length)
         }
 
         const removedImages = existing.images.filter((img) => remove.includes(img.url)).map((img) => ({ url: img.url }))
@@ -221,6 +226,7 @@ const deleteProductController = async (req, res) => {
             })
         }
         removeStoredImages(productData.images)
+        await Promise.all([Cart.deleteMany({ product: id }), Wishlist.deleteMany({ product: id })])
         return res.status(200).json({
             success: true,
             message: "Product Delete Sccessfully Done",

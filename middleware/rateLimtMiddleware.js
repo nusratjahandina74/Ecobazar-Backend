@@ -1,6 +1,4 @@
 const { rateLimit } = require('express-rate-limit')
-// Strict limits only in production (NODE_ENV=production). While developing/testing you would otherwise
-// lock yourself out after a few attempts.
 const dev = process.env.NODE_ENV !== 'production'
 const lim = (prod) => (dev ? 1000 : prod)
 const registrationLimiter = rateLimit({
