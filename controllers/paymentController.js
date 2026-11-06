@@ -51,10 +51,52 @@ const paymentController = async (req, res) => {
     });
   }
 
-  try {
+  // try {
+  //   const g = GATEWAY();
+  //   const transactionId = order.transactionId;
+  //   // Callback routes are mounted at the app root: /payment/success|fail|cancel|ipn
+  //   const paymentData = {
+  //     store_id: g.storeId,
+  //     tran_id: transactionId,
+  //     success_url: `${BACKEND_URL()}/payment/success?txnId=${transactionId}`,
+  //     fail_url: `${BACKEND_URL()}/payment/fail?txnId=${transactionId}`,
+  //     cancel_url: `${BACKEND_URL()}/payment/cancel?txnId=${transactionId}`,
+  //     amount: order.totalAmount.toFixed(2),
+  //     currency: "BDT",
+  //     signature_key: g.signatureKey,
+  //     desc: "EcoBazaar Product Purchase",
+  //     cus_name: shipping.name, cus_email: shipping.email, cus_add1: shipping.address1, cus_add2: shipping.address2,
+  //     cus_city: shipping.city, cus_state: shipping.state, cus_postcode: shipping.postcode,
+  //     cus_country: "Bangladesh", cus_phone: shipping.phone, type: "json"
+  //   };
+
+  //   // const { data } = await axios.post(g.apiUrl, new URLSearchParams(paymentData).toString(),
+  //   //   { headers: { "Content-Type": "application/x-www-form-urlencoded" }, timeout: 20000 });
+  //   const { data } = await axios.post(g.apiUrl, paymentData, {
+  //     headers: { "Content-Type": "application/json" },
+  //     timeout: 20000
+  //   });
+  //   let responseData = data;
+  //   if (typeof data === "string") { try { responseData = JSON.parse(data); } catch (e) { responseData = null; } }
+
+  //   if (responseData && responseData.payment_url) {
+  //     return res.status(200).json({
+  //       success: true, message: "Payment link generated successfully", paymentUrl: responseData.payment_url,
+  //       orderId: order._id, orderNumber: order.orderNumber, transactionId
+  //     });
+  //   }
+  //   throw new Error('gateway rejected');
+  // } catch (error) {
+  //   console.log("Payment init error:", error.message);
+  //   order.paymentStatus = 'Failed'; order.orderStatus = 'Cancelled';
+  //   order.statusHistory.push({ status: 'Cancelled', note: 'Payment gateway unavailable' });
+  //   await order.save();
+  //   await restoreOrderStock(order._id);
+  //   return res.status(502).json({ success: false, message: "Payment gateway is unavailable right now. Please try again or choose Cash on Delivery." });
+  // }
+    try {
     const g = GATEWAY();
     const transactionId = order.transactionId;
-    // Callback routes are mounted at the app root: /payment/success|fail|cancel|ipn
     const paymentData = {
       store_id: g.storeId,
       tran_id: transactionId,
@@ -65,30 +107,53 @@ const paymentController = async (req, res) => {
       currency: "BDT",
       signature_key: g.signatureKey,
       desc: "EcoBazaar Product Purchase",
-      cus_name: shipping.name, cus_email: shipping.email, cus_add1: shipping.address1, cus_add2: shipping.address2,
-      cus_city: shipping.city, cus_state: shipping.state, cus_postcode: shipping.postcode,
-      cus_country: "Bangladesh", cus_phone: shipping.phone, type: "json"
+      cus_name: shipping.name, 
+      cus_email: shipping.email, 
+      cus_add1: shipping.address1, 
+      cus_add2: shipping.address2,
+      cus_city: shipping.city, 
+      cus_state: shipping.state, 
+      cus_postcode: shipping.postcode,
+      cus_country: "Bangladesh", 
+      cus_phone: shipping.phone, 
+      type: "json"
     };
-
-    const { data } = await axios.post(g.apiUrl, new URLSearchParams(paymentData).toString(),
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" }, timeout: 20000 });
+    const { data } = await axios.post(g.apiUrl, paymentData, {
+      headers: { 
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      timeout: 20000 
+    });
 
     let responseData = data;
-    if (typeof data === "string") { try { responseData = JSON.parse(data); } catch (e) { responseData = null; } }
+    if (typeof data === "string") { 
+      try { responseData = JSON.parse(data); } catch (e) { responseData = null; } 
+    }
 
     if (responseData && responseData.payment_url) {
-      return res.status(200).json({ success: true, message: "Payment link generated successfully", paymentUrl: responseData.payment_url,
-        orderId: order._id, orderNumber: order.orderNumber, transactionId });
+      return res.status(200).json({ 
+        success: true, 
+        message: "Payment link generated successfully", 
+        paymentUrl: responseData.payment_url,
+        orderId: order._id, 
+        orderNumber: order.orderNumber, 
+        transactionId 
+      });
     }
-    throw new Error('gateway rejected');
+    throw new Error(responseData?.reason || 'gateway rejected');
   } catch (error) {
-    console.log("Payment init error:", error.message);
+    console.log("Payment init error:", error.response?.data || error.message);
     order.paymentStatus = 'Failed'; order.orderStatus = 'Cancelled';
-    order.statusHistory.push({ status: 'Cancelled', note: 'Payment gateway unavailable' });
+    order.statusHistory.push({ status: 'Cancelled', note: `Payment gateway unavailable: ${error.message}` });
     await order.save();
     await restoreOrderStock(order._id);
-    return res.status(502).json({ success: false, message: "Payment gateway is unavailable right now. Please try again or choose Cash on Delivery." });
+    return res.status(502).json({ 
+      success: false, 
+      message: "Payment gateway is unavailable right now. Please try again or choose Cash on Delivery." 
+    });
   }
+
 };
 
 const verifyWithGateway = async (transactionId) => {
