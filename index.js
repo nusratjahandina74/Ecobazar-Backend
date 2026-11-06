@@ -33,12 +33,18 @@ const app = express();
 app.set('trust proxy', 1);          // Render / Vercel sit behind a proxy: real client IP for rate limiting
 app.disable('x-powered-by');
 
-// CORS_ORIGINS="https://ecobazar-bd.vercel.app,https://ecobazar-admin.vercel.app" (comma separated). Empty = allow all.
 const origins = (process.env.CORS_ORIGINS || '').split(',').map((s) => s.trim().replace(/\/$/, '')).filter(Boolean);
 app.use(cors(origins.length ? {
-    origin: (origin, cb) => (!origin || origins.includes(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin) ? cb(null, true) : cb(null, false)),
+    origin: (origin, cb) => {
+        if (!origin || origins.includes(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
+            return cb(null, true);
+        }
+        return cb(new Error('Not allowed by CORS'));
+    },
     credentials: true,
 } : {}));
+
+
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' }, contentSecurityPolicy: false }));
 app.use(compression());
 app.use(express.json({ limit: '1mb' }));
