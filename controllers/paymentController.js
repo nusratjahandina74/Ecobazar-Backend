@@ -5,12 +5,21 @@ const { createOrderFromCart, restoreOrderStock, reserveStock } = require('../ser
 
 const BACKEND_URL = () => process.env.BACKEND_URL || "http://localhost:5000";
 const FRONTEND_URL = () => process.env.FRONTEND_URL || "http://localhost:5173";
-const GATEWAY = () => ({
-  storeId: process.env.AAMARPAY_STORE_ID || "aamarpaytest",
-  signatureKey: process.env.AAMARPAY_SIGNATURE_KEY || "dbb74894e82415a2f7ff0ec3a97e4183",
-  apiUrl: process.env.AAMARPAY_API_URL || "https://sandbox.aamarpay.com/jsonpost.php",
-  verifyUrl: process.env.AAMARPAY_VERIFY_URL || ""
-});
+const SANDBOX = { init: "https://sandbox.aamarpay.com/jsonpost.php", verify: "https://sandbox.aamarpay.com/api/v1/trxcheck/request.php" };
+const LIVE = { init: "https://secure.aamarpay.com/jsonpost.php", verify: "https://secure.aamarpay.com/api/v1/trxcheck/request.php" };
+// FREE sandbox (test money, no real charge) is the default. Set AAMARPAY_MODE=live on the server only when you go live.
+const GATEWAY = () => {
+  const live = String(process.env.AAMARPAY_MODE || '').toLowerCase() === 'live';
+  const defaults = live ? LIVE : SANDBOX;
+  const initEnv = (process.env.AAMARPAY_API_URL || "").trim();
+  const verifyEnv = (process.env.AAMARPAY_VERIFY_URL || "").trim();
+  return {
+    storeId: live ? (process.env.AAMARPAY_STORE_ID || "") : "aamarpaytest",
+    signatureKey: live ? (process.env.AAMARPAY_SIGNATURE_KEY || "") : "dbb74894e82415a2f7ff0ec3a97e4183",
+    apiUrl: live && /jsonpost\.php$/i.test(initEnv) ? initEnv : defaults.init,
+    verifyUrl: live && /trxcheck\/request\.php$/i.test(verifyEnv) ? verifyEnv : defaults.verify
+  };
+};
 
 const effectivePrice = (p) => (p.discountPrice && p.discountPrice > 0 ? p.discountPrice : p.price);
 const toFrontend = (path, params) => `${FRONTEND_URL()}${path}?${new URLSearchParams(params).toString()}`;
@@ -51,52 +60,10 @@ const paymentController = async (req, res) => {
     });
   }
 
-  // try {
-  //   const g = GATEWAY();
-  //   const transactionId = order.transactionId;
-  //   // Callback routes are mounted at the app root: /payment/success|fail|cancel|ipn
-  //   const paymentData = {
-  //     store_id: g.storeId,
-  //     tran_id: transactionId,
-  //     success_url: `${BACKEND_URL()}/payment/success?txnId=${transactionId}`,
-  //     fail_url: `${BACKEND_URL()}/payment/fail?txnId=${transactionId}`,
-  //     cancel_url: `${BACKEND_URL()}/payment/cancel?txnId=${transactionId}`,
-  //     amount: order.totalAmount.toFixed(2),
-  //     currency: "BDT",
-  //     signature_key: g.signatureKey,
-  //     desc: "EcoBazaar Product Purchase",
-  //     cus_name: shipping.name, cus_email: shipping.email, cus_add1: shipping.address1, cus_add2: shipping.address2,
-  //     cus_city: shipping.city, cus_state: shipping.state, cus_postcode: shipping.postcode,
-  //     cus_country: "Bangladesh", cus_phone: shipping.phone, type: "json"
-  //   };
-
-  //   // const { data } = await axios.post(g.apiUrl, new URLSearchParams(paymentData).toString(),
-  //   //   { headers: { "Content-Type": "application/x-www-form-urlencoded" }, timeout: 20000 });
-  //   const { data } = await axios.post(g.apiUrl, paymentData, {
-  //     headers: { "Content-Type": "application/json" },
-  //     timeout: 20000
-  //   });
-  //   let responseData = data;
-  //   if (typeof data === "string") { try { responseData = JSON.parse(data); } catch (e) { responseData = null; } }
-
-  //   if (responseData && responseData.payment_url) {
-  //     return res.status(200).json({
-  //       success: true, message: "Payment link generated successfully", paymentUrl: responseData.payment_url,
-  //       orderId: order._id, orderNumber: order.orderNumber, transactionId
-  //     });
-  //   }
-  //   throw new Error('gateway rejected');
-  // } catch (error) {
-  //   console.log("Payment init error:", error.message);
-  //   order.paymentStatus = 'Failed'; order.orderStatus = 'Cancelled';
-  //   order.statusHistory.push({ status: 'Cancelled', note: 'Payment gateway unavailable' });
-  //   await order.save();
-  //   await restoreOrderStock(order._id);
-  //   return res.status(502).json({ success: false, message: "Payment gateway is unavailable right now. Please try again or choose Cash on Delivery." });
-  // }
-    try {
+  try {
     const g = GATEWAY();
     const transactionId = order.transactionId;
+    // Callback routes are mounted at the app root: /payment/success|fail|cancel|ipn
     const paymentData = {
       store_id: g.storeId,
       tran_id: transactionId,
@@ -107,58 +74,60 @@ const paymentController = async (req, res) => {
       currency: "BDT",
       signature_key: g.signatureKey,
       desc: "EcoBazaar Product Purchase",
-      cus_name: shipping.name, 
-      cus_email: shipping.email, 
-      cus_add1: shipping.address1, 
+      cus_name: shipping.name,
+      cus_email: shipping.email,
+      cus_add1: shipping.address1,
       cus_add2: shipping.address2,
-      cus_city: shipping.city, 
-      cus_state: shipping.state, 
+      cus_city: shipping.city,
+      cus_state: shipping.state,
       cus_postcode: shipping.postcode,
-      cus_country: "Bangladesh", 
-      cus_phone: shipping.phone, 
+      cus_country: "Bangladesh",
+      cus_phone: shipping.phone,
       type: "json"
     };
-    const { data } = await axios.post(
-      g.apiUrl, 
-      new URLSearchParams(paymentData).toString(), 
-      {
-        headers: { 
-          "Content-Type": "application/x-www-form-urlencoded",
-          "Accept": "application/json"
-        },
-        timeout: 20000 
-      }
-    );
+
+    // aamarPay's jsonpost.php expects a JSON body.
+    const { data } = await axios.post(g.apiUrl, paymentData, {
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      timeout: 20000
+    });
     let responseData = data;
-    if (typeof data === "string") { 
-      try { responseData = JSON.parse(data); } catch (e) { responseData = null; } 
+    if (typeof data === "string") {
+      try { responseData = JSON.parse(data); } catch (e) { responseData = null; }
     }
 
     if (responseData && responseData.payment_url) {
-      return res.status(200).json({ 
-        success: true, 
-        message: "Payment link generated successfully", 
+      return res.status(200).json({
+        success: true,
+        message: "Payment link generated successfully",
         paymentUrl: responseData.payment_url,
-        orderId: order._id, 
-        orderNumber: order.orderNumber, 
-        transactionId 
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        transactionId
       });
     }
-    throw new Error(responseData?.reason || 'gateway rejected');
+    // Gateway answered but gave no payment_url (HTML page, "Invalid Store", etc.) - keep the real reason for the Render logs.
+    const raw = typeof data === "string" ? data.slice(0, 300) : JSON.stringify(data);
+    throw new Error(`aamarPay replied without payment_url (url: ${g.apiUrl}): ${raw}`);
   } catch (error) {
-    console.log("Payment init error:", error.response?.data || error.message);
-    order.paymentStatus = 'Failed'; order.orderStatus = 'Cancelled';
-    order.statusHistory.push({ status: 'Cancelled', note: `Payment gateway unavailable: ${error.message}` });
-    await order.save();
-    await restoreOrderStock(order._id);
-    return res.status(502).json({ 
-      success: false, 
-      message: "Payment gateway is unavailable right now. Please try again or choose Cash on Delivery." 
+    // Check the Render logs for this line: it shows the REAL reason behind the 502.
+    console.log("Payment init error:", error.response ? `HTTP ${error.response.status} ${JSON.stringify(error.response.data).slice(0, 300)}` : error.message);
+    try {
+      order.paymentStatus = 'Failed'; order.orderStatus = 'Cancelled';
+      order.statusHistory.push({ status: 'Cancelled', note: 'Payment gateway unavailable' });
+      await order.save();
+      await restoreOrderStock(order._id);
+    } catch (e) {
+      console.log("Could not roll back failed payment order:", e.message);
+    }
+    return res.status(502).json({
+      success: false,
+      message: "Payment gateway is unavailable right now. Please try again or choose Cash on Delivery."
     });
   }
-
 };
 
+// true = gateway confirms paid, false = gateway says NOT paid, null = could not check (callers treat null as "unknown", not as a failure).
 const verifyWithGateway = async (transactionId) => {
   const g = GATEWAY();
   if (!g.verifyUrl) return null;
@@ -167,10 +136,14 @@ const verifyWithGateway = async (transactionId) => {
       params: { request_id: transactionId, store_id: g.storeId, signature_key: g.signatureKey, type: "json" },
       timeout: 15000
     });
-    const status = (data && (data.pay_status || data.status_code)) || "";
+    let d = data;
+    if (typeof d === "string") { try { d = JSON.parse(d); } catch (e) { return null; } }
+    if (!d || typeof d !== "object") return null;
+    const status = d.pay_status || d.status_code || "";
     return String(status).toLowerCase() === "successful" || String(status) === "2";
   } catch (e) {
-    return false;
+    console.log("aamarPay verify error:", e.message);
+    return null;
   }
 };
 
