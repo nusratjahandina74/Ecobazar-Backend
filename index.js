@@ -17,11 +17,17 @@ const orderRoutes = require('./routes/orderRoutes');
 const wishlistRoutes = require('./routes/wishlistRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const { expireStaleOnlineOrders } = require('./services/orderService');
+const { isCloud } = require('./utils/storage');
 
 ['MONGODB_URL', 'ACCESS_TOKEN_SECRET'].forEach((k) => {
     if (!process.env[k]) console.error(`[config] ${k} is missing in the backend .env file!`);
 });
 process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', e));
+
+// Tell the developer exactly where uploaded images go (the #1 "my pictures disappeared" question).
+if (isCloud()) console.log('[uploads] Cloudinary is ON - images are stored permanently in the cloud.');
+else if (process.env.NODE_ENV === 'production') console.warn('[uploads] CLOUDINARY_URL is not set -> images go to the local ./uploads folder. That is fine on your PC, but on Render this folder is WIPED on every deploy/restart: add CLOUDINARY_URL in the Render environment.');
+else console.log('[uploads] Local disk mode - uploaded images are saved in ' + path.join(__dirname, 'uploads') + '/<products|banners|categories|branding>');
 
 const app = express();
 app.set('trust proxy', 1);          // Render / Vercel sit behind a proxy: real client IP for rate limiting

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const connect = async () => mongoose.connect(process.env.MONGODB_URL, { serverSelectionTimeoutMS: 10000, maxPoolSize: 50, minPoolSize: 5, socketTimeoutMS: 45000, retryWrites: true });
+const connect = async () => mongoose.connect(process.env.MONGODB_URL, { serverSelectionTimeoutMS: 10000, maxPoolSize: 50, minPoolSize: 5, socketTimeoutMS: 45000, retryWrites: true,  family: 4 });
 
 const syncIndexes = async () => {
     for (const name of ['User', 'Product', 'Cart', 'Order', 'Wishlist', 'Setting', 'Banner', 'ContactMessage', 'AuditLog', 'Category', 'Coupon', 'Review', 'Page', 'Subscriber']) {
