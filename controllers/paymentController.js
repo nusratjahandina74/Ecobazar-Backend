@@ -118,14 +118,17 @@ const paymentController = async (req, res) => {
       cus_phone: shipping.phone, 
       type: "json"
     };
-    const { data } = await axios.post(g.apiUrl, paymentData, {
-      headers: { 
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-      timeout: 20000 
-    });
-
+    const { data } = await axios.post(
+      g.apiUrl, 
+      new URLSearchParams(paymentData).toString(), 
+      {
+        headers: { 
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Accept": "application/json"
+        },
+        timeout: 20000 
+      }
+    );
     let responseData = data;
     if (typeof data === "string") { 
       try { responseData = JSON.parse(data); } catch (e) { responseData = null; } 
