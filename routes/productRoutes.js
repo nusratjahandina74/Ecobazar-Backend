@@ -1,13 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const {
-    createProductController,
-    getAllProductController,
-    singleProductController,
-    updateProductController,
-    deleteProductController
-} = require('../controllers/productController');
-const createUploader = require('../utils/uploader');
+const { getAllProductController, singleProductController } = require('../controllers/productController');
+const P = require('../controllers/admin/productAdminController');
+const { createUploader, persistUploads } = require('../utils/storage');
+const { requirePermission } = require('../middleware/permissions');
+const { secureMiddleware } = require('../middleware/secureMiddleware');
 const upload = createUploader('products');
 /**
  * @swagger
@@ -136,7 +133,7 @@ const upload = createUploader('products');
  *       500:
  *         description: Internal server error
  */
-router.post('/createproduct', upload.array('photos', 5), createProductController);
+router.post('/createproduct', secureMiddleware, requirePermission('products:write'), upload.array('photos', 5), persistUploads('products'), P.createProduct);
 
 /**
  * @swagger
@@ -229,7 +226,7 @@ router.get('/singleproduct/:id', singleProductController);
  *       404:
  *         description: Target product record matrix not found
  */
-router.post('/updateproduct/:id', upload.array('photos', 5), updateProductController);
+router.post('/updateproduct/:id', secureMiddleware, requirePermission('products:write'), upload.array('photos', 5), persistUploads('products'), P.updateProduct);
 
 /**
  * @swagger
@@ -263,6 +260,6 @@ router.post('/updateproduct/:id', upload.array('photos', 5), updateProductContro
  *       404:
  *         description: Target product information resource missing
  */
-router.delete('/deleteproduct/:id', deleteProductController);
+router.delete('/deleteproduct/:id', secureMiddleware, requirePermission('products:delete'), P.deleteProduct);
 
 module.exports = router;

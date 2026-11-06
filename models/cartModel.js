@@ -19,11 +19,13 @@ const cartSchema = new Schema({
         type: Number, 
         required: true 
     }, 
+    variantId: { type: mongoose.Schema.Types.ObjectId },
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
 })
-cartSchema.index({ product: 1, user: 1 }, { unique: true });
+cartSchema.index({ user: 1, product: 1, variantId: 1 }, { unique: true });
+cartSchema.index({ user: 1 });
 module.exports = mongoose.model('Cart',cartSchema)

@@ -6,6 +6,7 @@ const {
     deleteCartController, 
     getCartController
 } = require('../controllers/cartController');
+const { secureMiddleware, selfOrAdmin } = require('../middleware/secureMiddleware');
 
 /**
  * @swagger
@@ -48,7 +49,7 @@ const {
  *       500:
  *         description: Internal server error
  */
-router.post('/createcart', createCartController);
+router.post('/createcart', secureMiddleware, createCartController);
 
 /**
  * @swagger
@@ -87,7 +88,7 @@ router.post('/createcart', createCartController);
  *       500:
  *         description: Internal server error
  */
-router.post('/incredecrecart/:id', increDecreCartController);
+router.post('/incredecrecart/:id', secureMiddleware, increDecreCartController);
 
 /**
  * @swagger
@@ -110,7 +111,7 @@ router.post('/incredecrecart/:id', increDecreCartController);
  *       500:
  *         description: Internal server error
  */
-router.delete('/deletecart/:id', deleteCartController);
+router.delete('/deletecart/:id', secureMiddleware, deleteCartController);
 /**
  * @swagger
  * /api/cart/getcart/{id}:
@@ -188,5 +189,5 @@ router.delete('/deletecart/:id', deleteCartController);
  *                   type: string
  *                   example: Internal server error
  */
-router.get('/getcart/:id', getCartController);
+router.get('/getcart/:id', secureMiddleware, selfOrAdmin('id'), getCartController);
 module.exports = router;

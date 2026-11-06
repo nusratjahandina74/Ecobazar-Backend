@@ -1,13 +1,30 @@
+const sendError = require('../utils/sendError');
 const mongoose = require('mongoose')
 const Product = require('../models/productModel')
 const Cart = require('../models/cartModel')
+const { effectivePrice } = require('../services/orderService')
+
+// price + stock for the chosen variant (or the plain product)
+const resolveUnit = (product, variantId) => {
+    const hasVariants = product.variants && product.variants.some((v) => v.isActive !== false)
+    if (hasVariants) {
+        const v = variantId ? product.variants.id(variantId) : null
+        if (!v || v.isActive === false) return { error: 'Please choose an available option (size / color) for this product' }
+        return { price: effectivePrice({ price: v.price ?? product.price, discountPrice: v.discountPrice }), stock: v.stock, variantId: v._id, label: v.label }
+    }
+    return { price: effectivePrice(product), stock: product.stock, variantId: undefined }
+}
 const createCartController = async (req, res) => {
     try {
-        let { proId, userId } = req.body
+        let { proId, userId, variantId } = req.body
+        if (userId && String(userId) !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: "You can only modify your own cart" });
+        }
+        userId = (req.user.role === 'admin' && userId) ? userId : req.user.id
         if (!proId || !userId) {
             return res.status(400).json({
                 success: false,
-                message: "Product ID and User ID are required"
+                message: "Product ID is required"
             });
         }
         proId = proId.toString().trim();
@@ -27,22 +44,25 @@ const createCartController = async (req, res) => {
                 message: 'Product Not Found'
             })
         }
-        if (existingProduct.stock <= 0) {
+        if (existingProduct.status !== 'active') {
+            return res.status(400).json({ success: false, message: "This product is not available" });
+        }
+        const unit = resolveUnit(existingProduct, variantId)
+        if (unit.error) return res.status(400).json({ success: false, message: unit.error })
+        if (unit.stock <= 0) {
             return res.status(400).json({
                 success: false,
                 message: "This product is currently out of stock"
             });
         }
-        const finalPrice = (existingProduct.discountPrice && existingProduct.discountPrice > 0) 
-            ? existingProduct.discountPrice 
-            : existingProduct.price;
-        let cartItem = await Cart.findOne({ product: proId, user: userId });
+        const finalPrice = unit.price
+        let cartItem = await Cart.findOne({ product: proId, user: userId, variantId: unit.variantId || null });
         if (cartItem) {
             const newQuantity = cartItem.quantity + 1;
-            if (newQuantity > existingProduct.stock) {
+            if (newQuantity > unit.stock) {
                 return res.status(400).json({
                     success: false,
-                    message: `Cannot add more. Only ${existingProduct.stock} items left in stock.`
+                    message: `Cannot add more. Only ${unit.stock} items left in stock.`
                 });
             }
             cartItem.quantity = newQuantity;
@@ -60,6 +80,7 @@ const createCartController = async (req, res) => {
             quantity: 1,
             price: finalPrice,
             totalPrice: finalPrice,
+            ...(unit.variantId ? { variantId: unit.variantId } : {}),
             user: userId
         })
         await cart.save()
@@ -70,16 +91,14 @@ const createCartController = async (req, res) => {
         });
     } catch (error) {
         console.log(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        })
+        return sendError(res, error)
     }
 }
 const increDecreCartController = async (req, res) => {
     try {
         const { id } = req.params;
-        const { type, userId } = req.body;
+        const { type } = req.body;
+        const userId = req.user.id;
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
                 success: false,
@@ -100,19 +119,19 @@ const increDecreCartController = async (req, res) => {
                     message: "Associated product details not found"
                 });
             }
-            const finalPrice = (cartItem.product.discountPrice && cartItem.product.discountPrice > 0) 
-                ? cartItem.product.discountPrice 
-                : cartItem.product.price;
+            const unit = resolveUnit(cartItem.product, cartItem.variantId)
+            if (unit.error) return res.status(400).json({ success: false, message: unit.error })
+            const finalPrice = unit.price;
             const nextQuantity = cartItem.quantity + 1;
             cartItem.price = finalPrice;
-            cartItem.totalPrice = cartItem.quantity * finalPrice;
-            if (nextQuantity > cartItem.product.stock) {
+            if (nextQuantity > unit.stock) {
                 return res.status(400).json({
                     success: false,
-                    message: `Cannot increase quantity. Maximum stock limit reached (${cartItem.product.stock} available).`
+                    message: `Cannot increase quantity. Maximum stock limit reached (${unit.stock} available).`
                 });
             }
             cartItem.quantity = nextQuantity;
+            cartItem.totalPrice = cartItem.quantity * finalPrice;
         } else {
             if (cartItem.quantity > 1) {
                 cartItem.quantity -= 1;
@@ -136,16 +155,17 @@ const increDecreCartController = async (req, res) => {
         });
     }  catch (error) {
         console.log(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
+        return sendError(res, error);
     }
 };
 const deleteCartController = async (req, res) => {
     try {
         const { id } = req.params
-        const deleteCart = await Cart.findByIdAndDelete(id)
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, message: "Invalid Cart Item ID format" });
+        }
+        const filter = req.user.role === 'admin' ? { _id: id } : { _id: id, user: req.user.id }
+        const deleteCart = await Cart.findOneAndDelete(filter)
         if (!deleteCart) {
             return res.status(404).json({
                 success: false,
@@ -159,10 +179,7 @@ const deleteCartController = async (req, res) => {
         });
     } catch (error) {
         console.log(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        })
+        return sendError(res, error)
     }
 }
 const getCartController = async (req, res) => {
@@ -170,10 +187,7 @@ const getCartController = async (req, res) => {
         const { id } = req.params
         const getCart = await Cart.find({ user: id }).populate('product')
         if (!getCart || getCart.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "Cart is empty"
-            });
+            return res.status(200).json({ success: true, message: "Cart is empty", totalPrice: 0, data: [] });
         }
         let totalPrice = 0
         getCart.forEach(item => {
@@ -190,10 +204,7 @@ const getCartController = async (req, res) => {
         });
     } catch (error) {
         console.log(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        })
+        return sendError(res, error)
     }
 }
 module.exports = { createCartController, increDecreCartController, deleteCartController, getCartController }

@@ -7,6 +7,7 @@ const {
     paymentCancelController,
     paymentIPNController
 } = require('../controllers/paymentController');
+const { secureMiddleware } = require('../middleware/secureMiddleware');
 
 /**
  * @swagger
@@ -128,7 +129,7 @@ const {
  *       500:
  *         description: Server error or gateway outage.
  */
-router.post('/payment', paymentController);
+router.post('/payment', secureMiddleware, paymentController);
 
 /**
  * @swagger
@@ -165,6 +166,7 @@ router.post('/payment', paymentController);
  *         description: Direct application redirect to absolute standard single-page app landing point.
  */
 router.post('/payment/success', paymentSuccessController);
+router.get('/payment/success', paymentSuccessController);
 
 /**
  * @swagger
@@ -189,6 +191,7 @@ router.post('/payment/success', paymentSuccessController);
  *         description: Database synchronized. Status recorded as failed.
  */
 router.post('/payment/fail', paymentFailController);
+router.get('/payment/fail', paymentFailController);
 
 /**
  * @swagger
@@ -210,6 +213,7 @@ router.post('/payment/fail', paymentFailController);
  *         description: Order context safe dropped. Return validation successful.
  */
 router.post('/payment/cancel', paymentCancelController);
+router.get('/payment/cancel', paymentCancelController);
 
 /**
  * @swagger

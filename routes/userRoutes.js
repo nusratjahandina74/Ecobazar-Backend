@@ -5,7 +5,8 @@ const {
     singleUserDataController, 
     updateUserController, 
     deleteUserController 
-} = require('../controllers/userController'); 
+} = require('../controllers/userController');
+const { secureMiddleware, authorizeRoles, selfOrAdmin } = require('../middleware/secureMiddleware');
 /**
  * @openapi
  * /allusers:
@@ -36,7 +37,7 @@ const {
  *       500:
  *         description: Internal server error.
  */
-router.get('/allusers', getAllUsersController);
+router.get('/allusers', secureMiddleware, authorizeRoles('admin'), getAllUsersController);
 
 /**
  * @openapi
@@ -60,7 +61,7 @@ router.get('/allusers', getAllUsersController);
  *       500:
  *         description: Internal server error.
  */
-router.get('/singleuser/:id', singleUserDataController);
+router.get('/singleuser/:id', secureMiddleware, selfOrAdmin('id'), singleUserDataController);
 
 /**
  * @openapi
@@ -140,7 +141,7 @@ router.get('/singleuser/:id', singleUserDataController);
  *       500:
  *         description: Internal server error.
  */
-router.post('/updateuser/:id', updateUserController);
+router.post('/updateuser/:id', secureMiddleware, selfOrAdmin('id'), updateUserController);
 
 /**
  * @openapi
@@ -164,6 +165,6 @@ router.post('/updateuser/:id', updateUserController);
  *       500:
  *         description: Internal server error.
  */
-router.delete('/deleteuser/:id', deleteUserController);
+router.delete('/deleteuser/:id', secureMiddleware, authorizeRoles('admin'), deleteUserController);
 
 module.exports = router;

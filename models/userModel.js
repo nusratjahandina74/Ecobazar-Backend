@@ -43,7 +43,7 @@ const userSchema = new Schema({
     },
     role: {
         type: String,
-        enum: ['admin', 'user', 'editor', 'vendor'],
+        enum: ['admin', 'manager', 'staff', 'user', 'editor', 'vendor'],
         default: 'user'
     },
     isHold: {
@@ -90,4 +90,6 @@ const userSchema = new Schema({
         }
     }
 }, { timestamps: true })
+userSchema.index({ role: 1, createdAt: -1 })
+userSchema.index({ firstName: 1, lastName: 1 })
 module.exports = mongoose.model('User', userSchema)

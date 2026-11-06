@@ -1,191 +1,44 @@
 const mongoose = require('mongoose');
-const Product = require('../models/productModel')
-const { emptyFieldValidation } = require('../utils/validation');
-const createProductController = async (req, res) => {
-    try {
-        const { title, price, category, stock } = req.body
+const sendError = require('../utils/sendError');
+const Product = require('../models/productModel');
+const { parsePagination, pageMeta } = require('../utils/helpers');
 
-        //Validation check ebong ekhanei controller thamanor bebostha
-        const hasError = emptyFieldValidation(res, title, price, category, stock);
-        if (hasError || res.headersSent) return;
-
-        const titlExist = await Product.findOne({ title: title });
-        if (titlExist) {
-            return res.status(400).json({
-                success: false,
-                message: "Product title already exists"
-            });
-        }
-
-        if (price <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Price must be greater than 0"
-            });
-        }
-        if (Number(stock) < 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Stock quantity cannot be less than 0"
-            });
-        }
-
-        const sku = `${Date.now()}-${new Date().getFullYear()}`
-        const skuExist = await Product.findOne({ sku: sku });
-        if (skuExist) {
-            return res.status(400).json({
-                success: false,
-                message: "Product SKU already exists"
-            });
-        }
-
-        const product = new Product({
-            ...req.body,
-            sku: sku
-        });
-        await product.save()
-
-        return res.status(201).json({
-            success: true,
-            message: "Product created successfully",
-            data: product
-        });
-
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        })
-    }
-}
+// Storefront catalog. `?status=active` keeps the payload small; `?page=&limit=` switches to server-side pagination.
 const getAllProductController = async (req, res) => {
     try {
-        const productData = await Product.find({})
-        if (productData.length > 0) {
-            return res.status(200).json({
-                success: true,
-                message: "All Products fetched successfully",
-                totalProducts: productData.length,
-                data: productData
-            })
-        } else {
-            return res.status(404).json({
-                success: false,
-                message: "No products found in the database"
-            })
+        const filter = {};
+        if (['active', 'pending', 'inactive'].includes(req.query.status)) filter.status = req.query.status;
+        if (req.query.category) filter.category = req.query.category;
+        const paged = req.query.page !== undefined || req.query.limit !== undefined;
+        let q = Product.find(filter).sort({ createdAt: -1 }).lean();
+        let total;
+        if (paged) {
+            const { page, limit, skip } = parsePagination(req.query, { defaultLimit: 24, maxLimit: 100 });
+            q = q.skip(skip).limit(limit);
+            total = await Product.countDocuments(filter);
+            const data = await q;
+            res.set('Cache-Control', 'public, max-age=15');
+            return res.status(200).json({ success: true, totalProducts: total, data, pagination: pageMeta(total, page, limit) });
         }
+        const data = await q.limit(2000);
+        res.set('Cache-Control', 'public, max-age=15');
+        if (!data.length) return res.status(404).json({ success: false, message: 'No products found in the database' });
+        return res.status(200).json({ success: true, message: 'All Products fetched successfully', totalProducts: data.length, data });
     } catch (error) {
-        console.log(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        })
+        return sendError(res, error);
     }
-}
+};
+
 const singleProductController = async (req, res) => {
     try {
-        const { id } = req.params
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid Product ID format"
-            });
-        }
-
-        const productData = await Product.findById(id)
-        if (!productData) {
-            return res.status(404).json({
-                success: false,
-                message: "Product not found"
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: "Product found successfully",
-            data: productData
-        })
-
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: 'Invalid Product ID format' });
+        const data = await Product.findById(id).lean();
+        if (!data) return res.status(404).json({ success: false, message: 'Product not found' });
+        return res.status(200).json({ success: true, message: 'Product found successfully', data });
     } catch (error) {
-        console.log(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        })
+        return sendError(res, error);
     }
-}
-const updateProductController = async (req, res) => {
-    try {
-        const { id } = req.params
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid Product ID format"
-            });
-        }
+};
 
-        if (req.body.price && Number(req.body.price) <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Price must be greater than 0"
-            });
-        }
-        if (req.body.stock !== undefined && Number(req.body.stock) < 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Stock quantity cannot be less than 0"
-            });
-        }
-
-        const productData = await Product.findByIdAndUpdate(id, req.body, { new: true, runValidators: true })
-
-        if (!productData) {
-            return res.status(404).json({
-                success: false,
-                message: "Product not found"
-            })
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: "Product Update Sccessfully Done",
-            data: productData
-        })
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        })
-    }
-}
-const deleteProductController = async (req, res) => {
-    try {
-        const { id } = req.params
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid Product ID format"
-            });
-        }
-        const productData = await Product.findByIdAndDelete(id)
-        if (!productData) {
-            return res.status(404).json({
-                success: false,
-                message: "Product not found"
-            })
-        }
-        return res.status(200).json({
-            success: true,
-            message: "Product Delete Sccessfully Done",
-        })
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        })
-    }
-}
-module.exports = { createProductController, getAllProductController, singleProductController, updateProductController, deleteProductController }
+module.exports = { getAllProductController, singleProductController };

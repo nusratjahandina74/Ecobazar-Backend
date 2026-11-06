@@ -6,8 +6,10 @@ const {
     forgetPasswordController, 
     resetPasswordController, 
     resendverificationemailcontroller, 
-    verifyEmailController 
+    verifyEmailController,
+    meController
 } = require('../controllers/authController');
+const { secureMiddleware } = require('../middleware/secureMiddleware');
 const { registrationLimiter, loginLimiter, forgetPasswordLimiter } = require('../middleware/rateLimtMiddleware');
 
 /**
@@ -251,5 +253,8 @@ router.post('/resendverificationemail', resendverificationemailcontroller);
  *         description: Internal server error.
  */
 router.post('/verifyemail/:token', verifyEmailController);
+
+// NEW (additive): current session user, used by the frontend on page reload
+router.get('/me', secureMiddleware, meController);
 
 module.exports = router;
